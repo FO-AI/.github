@@ -1,13 +1,12 @@
 # Bug report form. Put this folder at .github/ISSUE_TEMPLATE/ in a PUBLIC FO-AI/.github repo to
 # serve every FO-AI repo (private ones too), or in each project repo. A repo with its own
 # ISSUE_TEMPLATE folder ignores the org-wide one.
-# planner-mcp reads the "### <label>" sections this form produces, so keep the labels stable,
-# and finds bugs by the `bug` label, so keep that too. Priority, Product and Area are org
-# issue fields set at triage; a form can't fill them.
+# planner-mcp finds bugs by the issue type Bug (set below) and reads the "### <label>" sections
+# this form produces, so keep both stable. Priority, Product and Area are org issue fields set
+# at triage; a form can't fill them.
 name: Bug
 description: Something is broken. Takes under a minute.
 type: Bug
-labels: [bug]
 body:
   - type: textarea
     id: what_happened
