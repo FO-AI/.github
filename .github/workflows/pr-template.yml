@@ -4,7 +4,8 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
-permissions: {}
+permissions:
+  pull-requests: read
 
 jobs:
   pr-template:
@@ -12,10 +13,11 @@ jobs:
     steps:
       - name: Check the PR body follows the org template
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_API_URL: ${{ github.event.pull_request.url }}
         shell: python3 {0}
         run: |
-          import os, re, sys
+          import json, os, re, sys, urllib.request
 
           REQUIRED_SECTIONS = ("What & why", "How I tested", "Risk & rollout")
           # Lines the template pre-fills. They do not count as content.
@@ -23,7 +25,18 @@ jobs:
               r"^\s*(Closes #.*|Card:.*|- \[ \] No migration, env-var, or deploy impact)\s*$"
           )
 
-          body = re.sub(r"<!--.*?-->", "", os.environ.get("PR_BODY") or "", flags=re.DOTALL)
+          # Read the current body, not the event payload, so a re-run sees description edits.
+          request = urllib.request.Request(
+              os.environ["PR_API_URL"],
+              headers={
+                  "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+              },
+          )
+          with urllib.request.urlopen(request) as response:
+              pr_body = json.load(response).get("body") or ""
+
+          body = re.sub(r"<!--.*?-->", "", pr_body, flags=re.DOTALL)
 
           sections, current = {}, None
           for line in body.splitlines():
@@ -45,5 +58,6 @@ jobs:
               print(f"::error::{problem}")
           if problems:
               print("Fill in the PR description from https://github.com/FO-AI/.github/blob/main/pull_request_template.md")
+              print("::error::After you fix the description, click Re-run on this check.")
               sys.exit(1)
           print("PR description follows the template.")
