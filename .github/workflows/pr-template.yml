@@ -1,0 +1,49 @@
+name: PR template
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  pr-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the PR body follows the org template
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        shell: python3 {0}
+        run: |
+          import os, re, sys
+
+          REQUIRED_SECTIONS = ("What & why", "How I tested", "Risk & rollout")
+          # Lines the template pre-fills. They do not count as content.
+          TEMPLATE_STUB = re.compile(
+              r"^\s*(Closes #.*|Card:.*|- \[ \] No migration, env-var, or deploy impact)\s*$"
+          )
+
+          body = re.sub(r"<!--.*?-->", "", os.environ.get("PR_BODY") or "", flags=re.DOTALL)
+
+          sections, current = {}, None
+          for line in body.splitlines():
+              heading = re.match(r"^##\s+(.+?)\s*$", line)
+              if heading:
+                  current = heading.group(1)
+                  sections[current] = []
+              elif current and not TEMPLATE_STUB.match(line):
+                  sections[current].append(line)
+
+          problems = []
+          for name in REQUIRED_SECTIONS:
+              if name not in sections:
+                  problems.append(f"Missing section '## {name}'.")
+              elif not "".join(sections[name]).strip():
+                  problems.append(f"Section '## {name}' is empty.")
+
+          for problem in problems:
+              print(f"::error::{problem}")
+          if problems:
+              print("Fill in the PR description from https://github.com/FO-AI/.github/blob/main/pull_request_template.md")
+              sys.exit(1)
+          print("PR description follows the template.")
